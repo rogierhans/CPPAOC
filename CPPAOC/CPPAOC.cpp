@@ -18,11 +18,15 @@ int main()
 	
 	//day01_part1();
 	//day01_part2();
-	day20_part1();
+	for (size_t i = 0; i < 1000; i++)
+	{
+		day20_part2();
+	}
+
 	//day01_part2();
 	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-	std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
-	std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]" << std::endl;
+	std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()/1000 << "[µs]" << std::endl;
+	std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count()/1000 << "[ns]" << std::endl;
 
 	return 0;
 }
