@@ -169,17 +169,17 @@ public:
 
 	double ValueMinimumRestriced(double max)
 	{
-	    double minimum = MinimumAtIntervalRestricted(max);
-	    return GetValue(minimum);
+		double minimum = MinimumAtIntervalRestricted(max);
+		return GetValue(minimum);
 	}
 
 
 	double GetValueInt(double p)
 	{
-	    if (p <= To && From <= To)
-	        return A + p * B + (p * p * C);
-	    else
-	        return MaxValue;
+		if (p <= To && From <= To)
+			return A + p * B + (p * p * C);
+		else
+			return MaxValue;
 	}
 
 	//public Tuple<double, double> Intersects(QuadraticInterval otherInterval)
@@ -306,6 +306,282 @@ public:
 	//}
 };
 
+
+class SUC
+{
+public:
+	double Objective;
+	int TotalTime;
+	int pMax;
+	int pMin;
+	int RampUp;
+	int RampDown;
+	int SU;
+	int SD;
+	int MinDownTime;
+	int MinUpTime;
+	double StartCost;
+	double A;
+	double B;
+	double C;
+	vector<double> LagrangeMultipliers;
+	vector<double> BM;
+	vector<double> CM;
+
+	void PrintStats()
+	{
+		cout << pMin << " " << pMax << " " << RampUp << " " << RampDown << " " << SU << " " << SD << " " << MinUpTime << " " << MinDownTime << endl;
+	}
+	SUC()
+	{
+	}
+
+	SUC(double a, double b, double c, double start, int pma, int pmi, int rampUp, int rampDown, int minUpTime, int minDownTime, int su, int sd, int totalTime)
+	{
+
+		pMax = pma;
+		pMin = pmi;
+		SU = su;
+		SD = sd;
+		RampUp = max(rampUp, 1);
+		RampDown = max(rampDown, 1);
+		MinDownTime = minDownTime;
+		MinUpTime = minUpTime;
+		StartCost = start;
+		A = a;
+		B = b;
+		C = c;
+		TotalTime = totalTime;
+	}
+
+	//	public void SetLM(List<double> LM, double[] bm, double[] cm)
+	//	{
+	//		LagrangeMultipliers = LM; BM = bm; CM = cm;
+	//
+	//	}
+	//
+	//	public void SetRandomLM()
+	//	{
+	//		LagrangeMultipliers = new List<double>();
+	//		Random rng = new Random();
+	//		for (int i = 0; i < TotalTime; i++)
+	//		{
+	//			LagrangeMultipliers.Add(B * (rng.NextDouble() * 3));
+	//
+	//		}
+	//	}
+	//
+	//
+	//
+	//	public void WriteToFile(string filename)
+	//	{
+	//		var objects = new List<object>() {
+	//			Objective,
+	//				TotalTime,
+	//				pMax,
+	//				pMin,
+	//				RampUp,
+	//				RampDown,
+	//				SU,
+	//				SD,
+	//				MinDownTime,
+	//				MinUpTime,
+	//				StartCost,
+	//				A,
+	//				B,
+	//				C,
+	//				string.Join("\t", LagrangeMultipliers),
+	//				string.Join("\t", BM),
+	//				string.Join("\t", CM)
+	//		};
+	//		File.WriteAllLines(filename, objects.Select(x = > x.ToString()).ToList());
+	//	}
+	static SUC ReadFromFile(string filename)
+	{
+		auto suc = new SUC();
+		auto lines = File.ReadAllLines(filename);
+		int i = 0;
+		suc.Objective = double.Parse(lines[i++]);
+		suc.TotalTime = int.Parse(lines[i++]);
+		suc.pMax = int.Parse(lines[i++]);
+		suc.pMin = int.Parse(lines[i++]);
+		suc.RampUp = int.Parse(lines[i++]);
+		suc.RampDown = int.Parse(lines[i++]);
+		suc.SU = int.Parse(lines[i++]);
+		suc.SD = int.Parse(lines[i++]);
+		suc.MinDownTime = int.Parse(lines[i++]);
+		suc.MinUpTime = int.Parse(lines[i++]);
+		suc.StartCost = double.Parse(lines[i++]);
+		suc.A = double.Parse(lines[i++]);
+		suc.B = double.Parse(lines[i++]);
+		suc.C = double.Parse(lines[i++]);
+		suc.LagrangeMultipliers = lines[i++].Split('\t').Select(x = > double.Parse(x)).ToList();
+		suc.BM = lines[i++].Split('\t').Select(x = > double.Parse(x)).ToArray();
+		suc.CM = lines[i++].Split('\t').Select(x = > double.Parse(x)).ToArray();
+		return suc;
+	}
+};
+
+class F
+{
+public:
+	//SUC UC;
+	vector<QuadraticInterval> Intervals;
+	int StartIndex = 0;
+
+	F(F& other)
+	{
+		StartIndex = other.StartIndex;
+		//UC = other.UC;
+
+		Intervals.push_back(other.Intervals[0].Copy());
+		for (int i = 1; i < other.Intervals.size(); i++)
+		{
+			if (other.Intervals[i].From != other.Intervals[i].To)
+			{
+				Intervals.push_back(other.Intervals[i].Copy());
+			}
+		}
+	}
+
+	//private void Print()
+	//{
+	//	// if (StartIndex == 0)
+	//	{
+	//		for (int i = 0; i < Intervals.Count; i++)
+	//		{
+	//			Console.WriteLine("{0} {1}", i, Intervals[i]);
+	//		}
+	//	}
+	//}
+
+	//public F(SUC uc, int startIndex, double startCost)
+	//{
+	//	UC = uc;
+	//	StartIndex = startIndex;
+	//	if (startIndex == 0)
+	//	{
+	//		Intervals.Add(new QuadraticInterval(UC.pMin, UC.pMax, 0, 0, 0, StartIndex));
+	//	}
+	//	else
+	//	{
+	//		Intervals.Add(new QuadraticInterval(UC.pMin, UC.SU, startCost, 0, 0, StartIndex));
+	//	}
+	//	IncreasePoints(startIndex);
+	//}
+
+
+	//internal double BestValue()
+	//{
+	//	double bestValue = Intervals[0].ValueMinimum();
+	//	for (int i = 1; i < Intervals.Count; i++)
+	//	{
+	//		var interval = Intervals[i];
+	//		bestValue = Math.Min(bestValue, interval.ValueMinimum());
+	//	}
+	//	return bestValue;
+	//}
+
+	//public void NextPoints(int h)
+	//{
+	//	int Index = GetOptimalNode();
+	//	var bestInterval = Intervals[Index];
+	//	double pStar = bestInterval.MinimumAtInterval();
+	//	double To = bestInterval.To;
+	//	bestInterval.To = pStar;
+	//	var midInterval = new QuadraticInterval(Math.Max(pStar - UC.RampDown, UC.pMin), Math.Min(pStar + UC.RampUp, UC.pMax), bestInterval.ValueMinimum(), 0, 0, StartIndex);
+	//	Intervals.Insert(Index + 1, midInterval);
+	//	var rightInterval = bestInterval.Copy();
+	//	rightInterval.From = pStar;
+	//	rightInterval.To = To;
+	//	Intervals.Insert(Index + 2, rightInterval);
+	//	ShiftLeft(Index);
+	//	ShiftRight(Index + 2);
+	//	Trim();
+	//}
+
+
+	//private int GetOptimalNode()
+
+	//{
+	//	int INDEX = 0;
+	//	var min = Intervals[INDEX].MinimumHack();
+	//	while (min > Intervals[INDEX].To && INDEX < Intervals.Count - 1)
+	//	{
+	//		INDEX++;
+	//		min = Intervals[INDEX].MinimumHack();
+	//	}
+	//	return INDEX;
+
+	//}
+
+
+	//public void ShiftLeft(int index)
+	//{
+	//	for (int i = 0; i <= index; i++)
+	//	{
+
+	//		var interval = Intervals[i];
+	//		interval.From = Math.Max(UC.pMin, interval.From - UC.RampDown);
+	//		interval.To = Math.Max(UC.pMin, interval.To - UC.RampDown);
+	//		interval.A = interval.A + UC.RampDown * interval.B + UC.RampDown * UC.RampDown * interval.C;
+	//		interval.B = interval.B + UC.RampDown * interval.C * 2;
+	//	}
+	//}
+
+
+
+	//public void ShiftRight(int index)
+	//{
+	//	for (int i = index; i < Intervals.Count; i++)
+	//	{
+	//		var interval = Intervals[i];
+	//		interval.From = Math.Min(UC.pMax, interval.From + UC.RampUp);
+	//		interval.To = Math.Min(UC.pMax, interval.To + UC.RampUp);
+	//		interval.A = interval.A - UC.RampUp * interval.B + UC.RampUp * UC.RampUp * interval.C;
+	//		interval.B = interval.B - (UC.RampUp * 2 * interval.C);
+	//	}
+	//}
+	//public void Trim()
+	//{
+	//	var first = Intervals.First();
+	//	while (first.From == first.To)
+	//	{
+	//		Intervals.RemoveAt(0);
+	//		first = Intervals.First();
+	//	}
+	//	var last = Intervals.Last();
+	//	while (last.From == last.To)
+	//	{
+	//		Intervals.RemoveAt(Intervals.Count - 1);
+	//		last = Intervals.Last();
+	//	}
+	//}
+
+	//public void IncreasePoints(int t)
+	//{
+	//	foreach(var interval in Intervals)
+	//	{
+	//		interval.A += UC.A;
+	//		interval.B += -UC.LagrangeMultipliers[t] + UC.B + UC.BM[t];
+	//		interval.C += UC.C + UC.CM[t];
+	//	}
+	//}
+
+	//internal double BestEnd()
+	//{
+	//	double bestValue = Intervals[0].ValueMinimumRestriced(UC.SD);
+	//	for (int i = 1; i < Intervals.Count; i++)
+	//	{
+	//		var interval = Intervals[i];
+	//		if (interval.From <= UC.SD)
+	//		{
+	//			bestValue = Math.Min(bestValue, interval.ValueMinimumRestriced(UC.SD));
+	//		}
+	//	}
+	//	return bestValue;
+	//}
+};
 
 int main()
 {
