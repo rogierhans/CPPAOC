@@ -12,13 +12,9 @@
 #include "Day20.h"
 using namespace std;
 
-
+double const MaxValue = 10000000000;
 class QuadraticInterval
 {
-private:
-	double const MaxValue = 10000000000;
-
-
 public:
 	double From;
 	double To;
@@ -34,11 +30,11 @@ public:
 		C = c;
 		ZID = zid;
 	}
-	//QuadraticInterval Copy()
-	//{
-	//	QuadraticInterval newQI(From, To, A, B, C, ZID);
-	//	return newQI;
-	//}
+	QuadraticInterval Copy()
+	{
+		QuadraticInterval newQI(From, To, A, B, C, ZID);
+		return newQI;
+	}
 	double IntersectPoint(QuadraticInterval& other, double& Point, double& NextPoint)
 	{
 		if (Point == To)
@@ -182,6 +178,10 @@ public:
 			return MaxValue;
 	}
 
+
+	void Print() {
+		cout << From << " " << To << " " << A << " " << B << " " << C << " " << endl;
+	}
 };
 
 
@@ -328,31 +328,30 @@ public:
 	vector<QuadraticInterval> Intervals;
 	int StartIndex = 0;
 
-	//F(F& other)
-	//{
-	//	StartIndex = other.StartIndex;
-	//	UC = other.UC;
+	F(F& other)
+	{
+		StartIndex = other.StartIndex;
+		UC = other.UC;
 
-	//	Intervals.push_back(other.Intervals[0].Copy());
-	//	for (int i = 1; i < other.Intervals.size(); i++)
-	//	{
-	//		if (other.Intervals[i].From != other.Intervals[i].To)
-	//		{
-	//			Intervals.push_back(other.Intervals[i].Copy());
-	//		}
-	//	}
-	//}
+		Intervals.push_back(other.Intervals[0].Copy());
+		for (int i = 1; i < other.Intervals.size(); i++)
+		{
+			if (other.Intervals[i].From != other.Intervals[i].To)
+			{
+				Intervals.push_back(other.Intervals[i].Copy());
+			}
+		}
+	}
 
-	//private void Print()
-	//{
-	//	// if (StartIndex == 0)
-	//	{
-	//		for (int i = 0; i < Intervals.Count; i++)
-	//		{
-	//			Console.WriteLine("{0} {1}", i, Intervals[i]);
-	//		}
-	//	}
-	//}
+	void Print()
+	{
+
+		for (int i = 0; i < Intervals.size(); i++)
+		{
+			Intervals[i].Print();
+		}
+
+	}
 
 
 	void IncreasePoints(int t)
@@ -364,6 +363,8 @@ public:
 			Intervals[i].C += UC.C + UC.CM[t];
 		}
 	}
+
+
 	F(SUC uc, int startIndex, double startCost)
 	{
 		UC = uc;
@@ -458,7 +459,7 @@ public:
 		return bestValue;
 	}
 
-	void NextPoints(int h)
+	void NextPoints()
 	{
 		int Index = GetOptimalNode();
 		auto& bestInterval = Intervals[Index];
@@ -467,25 +468,11 @@ public:
 		bestInterval.To = pStar;
 		QuadraticInterval midInterval(max(pStar - UC.RampDown, (double)UC.pMin), min(pStar + UC.RampUp, (double)UC.pMax), bestInterval.ValueMinimum(), 0, 0, StartIndex);
 
-		//Intervals.insert(Intervals.begin() + Index + 1, midInterval);
-		//QuadraticInterval rightInterval = bestInterval.Copy();
-		//rightInterval.From = pStar;
-		//rightInterval.To = To;
-		//Intervals.insert(Intervals.begin() + Index + 2, rightInterval);
-
-		vector<QuadraticInterval> list;
-		/*for (size_t i = 0; i <= Index; i++)
-		{
-			list.push_back(Intervals[i]);
-		}
-		list.push_back(midInterval);
-		list.push_back(rightInterval);
-
-		for (size_t i = Index+1; i < Intervals.size(); i++)
-		{
-			list.push_back(Intervals[i]);
-		}*/
-		//Intervals = list;
+		Intervals.insert(Intervals.begin() + Index + 1, midInterval);
+		QuadraticInterval rightInterval = bestInterval.Copy();
+		rightInterval.From = pStar;
+		rightInterval.To = To;
+		Intervals.insert(Intervals.begin() + Index + 2, rightInterval);
 		ShiftLeft(Index);
 		ShiftRight(Index + 2);
 		Trim();
@@ -494,6 +481,105 @@ public:
 
 };
 
+
+
+class RRF
+{
+public:
+	bool Reduction = true;
+	vector<vector<F>> Fs;
+
+	SUC UC;
+
+	RRF(SUC uc, bool reduction)
+	{
+		UC = uc;
+		Reduction = reduction;
+	}
+
+	void AddNew(int h, double startCost)
+	{
+		Fs[h].push_back(F(UC, h, startCost));
+	}
+
+	/*void Update(int t)
+	{
+		for(const F& z : Fs[t - 1])
+		{
+			Fs[t].push_back(F(z));
+		}
+		foreach(var Z in Fs[t])
+		{
+			Z.NextPoints(t);
+			Z.IncreasePoints(t);
+		}
+	}
+
+
+
+	double BestValue(int h)
+	{
+		double bestValue = double.MaxValue;
+		foreach(var Z in Fs[h])
+		{
+			bestValue = Math.Min(bestValue, Z.BestValue());
+		}
+		return bestValue;
+	}*/
+	void FillInDP()
+	{
+		vector<vector<double>> stop(UC.LagrangeMultipliers.size(), std::vector<double>(UC.MinDownTime, 0.0));
+		//for (int tau = 0; tau < UC.MinDownTime; tau++)
+		//{
+		//	stop[0, tau] = 0;
+		//}
+		for (int z = 0; z < UC.LagrangeMultipliers.size(); z++)
+		{
+			Fs.push_back(vector<F>());
+		}
+		AddNew(0, UC.StartCost);
+		for (int h = 1; h < UC.TotalTime; h++)
+		{
+			stop[h, UC.MinDownTime - 1] = min(stop[h - 1, UC.MinDownTime - 2], stop[h - 1, UC.MinDownTime - 1]);
+			for (int t = 1; t < UC.MinDownTime - 1; t++)
+			{
+				stop[h, t] = stop[h - 1, t - 1];
+			}
+			//stop[h, 0] = GetBestStop(h);
+			//Update(h);
+			//double bestStart = min(UC.StartCost, UC.StartCost + stop[h - 1, UC.MinDownTime - 1]);
+			//AddNew(h, bestStart);
+		}
+	}
+	double GetScore()
+	{
+
+
+		//	FillInDP();
+		double bestValue = 0;
+		//	for (int tau = 0; tau < UC.MinDownTime; tau++)
+		//	{
+		//		bestValue = Math.Min(bestValue, stop[UC.LagrangeMultipliers.Count - 1, tau]);
+		//	}
+		//	bestValue = Math.Min(bestValue, BestValue(UC.LagrangeMultipliers.Count - 1));
+		//	return bestValue;
+		//}
+		//internal double GetBestStop(int h)
+		//{
+		double bestStop = MaxValue;
+		//	//h-1???
+		//	foreach(var Z in Fs[h - 1])
+		//	{
+		//		if (h - Z.StartIndex >= UC.MinUpTime || Z.StartIndex == 0)
+		//		{
+		//			bestStop = Math.Min(Z.BestEnd(), bestStop);
+		//		}
+		//	}
+		return bestStop;
+	}
+
+
+};
 
 
 int main()
@@ -508,8 +594,16 @@ int main()
 	double intersect = QI.IntersectPoint(Q2, min, max);
 	cout << intersect << endl;
 
-	auto suc = SUC::ReadFromFile("C:\\Users\\Rogier\\OneDrive - Universiteit Utrecht\\1UCTest\\GA10\\0.suc");
+	SUC suc = SUC::ReadFromFile("C:\\Users\\Rogier\\OneDrive - Universiteit Utrecht\\1UCTest\\GA10\\0.suc");
 	suc.PrintStats();
+
+	RRF rrf(suc, false);
+	cout << rrf.GetScore() << endl;
+	//F f(suc, 0, 0);
+	//f.Print();
+	//f.NextPoints();s
+	//f.IncreasePoints(0);
+	//f.Print();
 	//day01_part1();
 	//day01_part2();
 	//for (size_t i = 0; i < 1000; i++)
@@ -519,8 +613,8 @@ int main()
 
 	//day01_part2();
 	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-	std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000 << "[µs]" << std::endl;
-	std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() / 1000 << "[ns]" << std::endl;
+	std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
+	std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]" << std::endl;
 
 	return 0;
 }
