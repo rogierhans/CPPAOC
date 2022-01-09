@@ -30,7 +30,7 @@ public:
 		C = c;
 		ZID = zid;
 	}
-	QuadraticInterval Copy()
+	QuadraticInterval Copy() const
 	{
 		QuadraticInterval newQI(From, To, A, B, C, ZID);
 		return newQI;
@@ -328,7 +328,7 @@ public:
 	vector<QuadraticInterval> Intervals;
 	int StartIndex = 0;
 
-	F(F& other)
+	F(const F& other)
 	{
 		StartIndex = other.StartIndex;
 		UC = other.UC;
@@ -341,6 +341,7 @@ public:
 				Intervals.push_back(other.Intervals[i].Copy());
 			}
 		}
+		
 	}
 
 	void Print()
@@ -408,7 +409,8 @@ public:
 
 	void ShiftLeft(int index)
 	{
-		for (int i = 0; i <= index; i++)
+
+			for (int i = 0; i <= index; i++)
 		{
 
 			auto& interval = Intervals[i];
@@ -475,7 +477,9 @@ public:
 		Intervals.insert(Intervals.begin() + Index + 2, rightInterval);
 		ShiftLeft(Index);
 		ShiftRight(Index + 2);
+
 		Trim();
+		
 	}
 
 
@@ -502,33 +506,60 @@ public:
 		Fs[h].push_back(F(UC, h, startCost));
 	}
 
-	/*void Update(int t)
+	void Update(int t)
 	{
-		for(const F& z : Fs[t - 1])
+		for (auto z : Fs[t - 1])
 		{
-			Fs[t].push_back(F(z));
+			F newElement = F(z);
+			z.Print();
+			newElement.Print();
+			Fs[t].push_back(newElement);
 		}
-		foreach(var Z in Fs[t])
+		for (auto Z : Fs[t])
 		{
-			Z.NextPoints(t);
+			Z.NextPoints();
 			Z.IncreasePoints(t);
 		}
 	}
 
+	double GetBestStop(int h)
+	{
+		double bestStop = MaxValue;
+		//h-1???
+		for (auto Z : Fs[h - 1])
+		{
+			if (h - Z.StartIndex >= UC.MinUpTime || Z.StartIndex == 0)
+			{
+				bestStop = min(Z.BestEnd(), bestStop);
+			}
+		}
+		return bestStop;
+	}
 
 
 	double BestValue(int h)
 	{
-		double bestValue = double.MaxValue;
-		foreach(var Z in Fs[h])
+		double bestValue = MaxValue;
+		for (auto Z : Fs[h])
 		{
-			bestValue = Math.Min(bestValue, Z.BestValue());
+			bestValue = min(bestValue, Z.BestValue());
 		}
 		return bestValue;
-	}*/
+	}
+
+	void Print(int t) {
+		for (size_t i = 0; i < Fs[t].size(); i++)
+		{
+			cout << "F" << i << endl;
+			Fs[t][i].Print();
+		}
+	}
+
+	vector<vector< double>> stop;
 	void FillInDP()
 	{
-		vector<vector<double>> stop(UC.LagrangeMultipliers.size(), std::vector<double>(UC.MinDownTime, 0.0));
+		vector<vector<double>> newstop(UC.LagrangeMultipliers.size(), std::vector<double>(UC.MinDownTime, 0.0));
+		stop = newstop;
 		//for (int tau = 0; tau < UC.MinDownTime; tau++)
 		//{
 		//	stop[0, tau] = 0;
@@ -538,46 +569,37 @@ public:
 			Fs.push_back(vector<F>());
 		}
 		AddNew(0, UC.StartCost);
+		//Print(0);
 		for (int h = 1; h < UC.TotalTime; h++)
 		{
+
 			stop[h, UC.MinDownTime - 1] = min(stop[h - 1, UC.MinDownTime - 2], stop[h - 1, UC.MinDownTime - 1]);
 			for (int t = 1; t < UC.MinDownTime - 1; t++)
 			{
 				stop[h, t] = stop[h - 1, t - 1];
 			}
-			//stop[h, 0] = GetBestStop(h);
-			//Update(h);
-			//double bestStart = min(UC.StartCost, UC.StartCost + stop[h - 1, UC.MinDownTime - 1]);
-			//AddNew(h, bestStart);
+			stop[h][0] = GetBestStop(h);
+		
+			Update(h);
+			Print(h); string s; cin >> s; cout << s;
+			double bestStart = min(UC.StartCost, UC.StartCost + stop[h - 1][UC.MinDownTime - 1]);
+			AddNew(h, bestStart);
+			//Print(h);
 		}
 	}
 	double GetScore()
 	{
 
 
-		//	FillInDP();
+		FillInDP();
 		double bestValue = 0;
-		//	for (int tau = 0; tau < UC.MinDownTime; tau++)
-		//	{
-		//		bestValue = Math.Min(bestValue, stop[UC.LagrangeMultipliers.Count - 1, tau]);
-		//	}
-		//	bestValue = Math.Min(bestValue, BestValue(UC.LagrangeMultipliers.Count - 1));
-		//	return bestValue;
-		//}
-		//internal double GetBestStop(int h)
-		//{
-		double bestStop = MaxValue;
-		//	//h-1???
-		//	foreach(var Z in Fs[h - 1])
-		//	{
-		//		if (h - Z.StartIndex >= UC.MinUpTime || Z.StartIndex == 0)
-		//		{
-		//			bestStop = Math.Min(Z.BestEnd(), bestStop);
-		//		}
-		//	}
-		return bestStop;
+		for (int tau = 0; tau < UC.MinDownTime; tau++)
+		{
+			bestValue = min(bestValue, stop[UC.LagrangeMultipliers.size() - 1][ tau]);
+		}
+		bestValue = min(bestValue, BestValue(UC.LagrangeMultipliers.size() - 1));
+		return bestValue;
 	}
-
 
 };
 
@@ -587,18 +609,11 @@ int main()
 	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
 
-	QuadraticInterval QI(0, 100, 10, 1, 0.1, 0);
-	QuadraticInterval Q2(0, 100, 0, 2, 0.1, 0);
-	double min = 0;
-	double max = 100;
-	double intersect = QI.IntersectPoint(Q2, min, max);
-	cout << intersect << endl;
-
 	SUC suc = SUC::ReadFromFile("C:\\Users\\Rogier\\OneDrive - Universiteit Utrecht\\1UCTest\\GA10\\0.suc");
 	suc.PrintStats();
 
 	RRF rrf(suc, false);
-	cout << rrf.GetScore() << endl;
+	cout <<"score: " << rrf.GetScore() << endl;
 	//F f(suc, 0, 0);
 	//f.Print();
 	//f.NextPoints();s
