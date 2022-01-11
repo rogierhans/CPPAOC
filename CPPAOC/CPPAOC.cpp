@@ -10,6 +10,7 @@
 #include <chrono>
 #include "Day01.h"
 #include "Day20.h"
+#include <sstream>
 using namespace std;
 
 double const MaxValue = 10000000000;
@@ -209,6 +210,11 @@ public:
 	void PrintStats()
 	{
 		cout << Objective << " " << pMin << " " << pMax << " " << RampUp << " " << RampDown << " " << SU << " " << SD << " " << MinUpTime << " " << MinDownTime << endl;
+		//for (size_t t = 0; t < CM.size(); t++)
+		//{
+		//	cout << CM[t] << endl;
+		//}
+	
 	}
 	SUC()
 	{
@@ -237,54 +243,16 @@ public:
 	//		LagrangeMultipliers = LM; BM = bm; CM = cm;
 	//
 	//	}
-	//
-	//	public void SetRandomLM()
-	//	{
-	//		LagrangeMultipliers = new List<double>();
-	//		Random rng = new Random();
-	//		for (int i = 0; i < TotalTime; i++)
-	//		{
-	//			LagrangeMultipliers.Add(B * (rng.NextDouble() * 3));
-	//
-	//		}
-	//	}
-	//
-	//
-	//
-	//	public void WriteToFile(string filename)
-	//	{
-	//		var objects = new List<object>() {
-	//			Objective,
-	//				TotalTime,
-	//				pMax,
-	//				pMin,
-	//				RampUp,
-	//				RampDown,
-	//				SU,
-	//				SD,
-	//				MinDownTime,
-	//				MinUpTime,
-	//				StartCost,
-	//				A,
-	//				B,
-	//				C,
-	//				string.Join("\t", LagrangeMultipliers),
-	//				string.Join("\t", BM),
-	//				string.Join("\t", CM)
-	//		};
-	//		File.WriteAllLines(filename, objects.Select(x = > x.ToString()).ToList());
-	//	}
-	static vector<double> split_string_to_vec(const string& s, const string& delimiter) {
-		std::size_t start = 0;
-		std::size_t end = s.find(delimiter);
-		std::vector<double> v;
-		while (end != std::string::npos) {
-			v.emplace_back(std::stod(s.substr(start, end - start)));
-			start = end + delimiter.size();
-			end = s.find(delimiter, start);
+	static vector<double> split_string_to_vec(const string &s) {
+		vector<double> result;
+		stringstream ss(s);
+		string item;
+
+		while (getline(ss, item, '\t')) {
+			result.push_back(stod(item));
 		}
-		v.emplace_back(std::stoi(s.substr(start, s.size() - start)));
-		return v;
+
+		return result;
 	}
 	static SUC ReadFromFile(string filename)
 	{
@@ -314,9 +282,9 @@ public:
 		suc.A = stod(lines[i++]);
 		suc.B = stod(lines[i++]);
 		suc.C = stod(lines[i++]);
-		suc.LagrangeMultipliers = split_string_to_vec(lines[i++], "\t");
-		suc.BM = split_string_to_vec(lines[i++], "\t");
-		suc.CM = split_string_to_vec(lines[i++], "\t");
+		suc.LagrangeMultipliers = split_string_to_vec(lines[i++]);
+		suc.BM = split_string_to_vec(lines[i++]);
+		suc.CM = split_string_to_vec(lines[i++]);
 		return suc;
 	}
 };
@@ -357,12 +325,18 @@ public:
 
 	void IncreasePoints(int t)
 	{
+		//cout << "----b4 increase----" << endl;
+		//Print(); 
 		for (size_t i = 0; i < Intervals.size(); i++)
 		{
 			Intervals[i].A += UC.A;
 			Intervals[i].B += -UC.LagrangeMultipliers[t] + UC.B + UC.BM[t];
 			Intervals[i].C += UC.C + UC.CM[t];
+			//cout << UC.CM[t] << endl;
 		}
+		//cout << "Fter increase" << endl;
+		//Print();
+		//cout << "____________________" << endl;
 	}
 
 
@@ -378,7 +352,9 @@ public:
 		{
 			Intervals.push_back(QuadraticInterval(UC.pMin, UC.SU, startCost, 0, 0, StartIndex));
 		}
+		//Print();
 		IncreasePoints(startIndex);
+
 	}
 
 
@@ -477,7 +453,6 @@ public:
 		Intervals.insert(Intervals.begin() + Index + 2, rightInterval);
 		ShiftLeft(Index);
 		ShiftRight(Index + 2);
-
 		Trim();
 		
 	}
@@ -508,17 +483,24 @@ public:
 
 	void Update(int t)
 	{
-		for (auto z : Fs[t - 1])
+		for (int i = 0; i < Fs[t-1].size(); i++)
 		{
-			F newElement = F(z);
-			z.Print();
-			newElement.Print();
+			F newElement = F(Fs[t-1][i]);
+			//z.Print();
+			//newElement.Print();
+			//cout << endl;
 			Fs[t].push_back(newElement);
+
 		}
-		for (auto Z : Fs[t])
+		for (int i = 0; i < Fs[t].size(); i++)
 		{
-			Z.NextPoints();
-			Z.IncreasePoints(t);
+		//	Fs[t][i].Print();
+			Fs[t][i].NextPoints();
+			//Fs[t][i].Print();
+			Fs[t][i].IncreasePoints(t);
+			//Fs[t][i].Print();
+
+			//Fs[t][i].Print();
 		}
 	}
 
@@ -533,6 +515,7 @@ public:
 				bestStop = min(Z.BestEnd(), bestStop);
 			}
 		}
+		//cout << "best" << bestStop << endl;
 		return bestStop;
 	}
 
@@ -550,7 +533,7 @@ public:
 	void Print(int t) {
 		for (size_t i = 0; i < Fs[t].size(); i++)
 		{
-			cout << "F" << i << endl;
+			//cout << "F" << i << endl;
 			Fs[t][i].Print();
 		}
 	}
@@ -573,19 +556,26 @@ public:
 		for (int h = 1; h < UC.TotalTime; h++)
 		{
 
-			stop[h, UC.MinDownTime - 1] = min(stop[h - 1, UC.MinDownTime - 2], stop[h - 1, UC.MinDownTime - 1]);
+			stop[h][ UC.MinDownTime - 1] = min(stop[h - 1][ UC.MinDownTime - 2], stop[h - 1][ UC.MinDownTime - 1]);
 			for (int t = 1; t < UC.MinDownTime - 1; t++)
 			{
-				stop[h, t] = stop[h - 1, t - 1];
+				stop[h][ t] = stop[h - 1][ t - 1];
 			}
 			stop[h][0] = GetBestStop(h);
 		
 			Update(h);
-			Print(h); string s; cin >> s; cout << s;
 			double bestStart = min(UC.StartCost, UC.StartCost + stop[h - 1][UC.MinDownTime - 1]);
 			AddNew(h, bestStart);
 			//Print(h);
 		}
+		//for (size_t i = 0; i < stop.size(); i++)
+		//{
+		//	for (size_t j = 0; j < stop[i].size(); j++)
+		//	{
+		//		cout << stop[i][j] << " ";
+		//	}
+		//	cout << endl;
+		//}
 	}
 	double GetScore()
 	{
@@ -606,14 +596,22 @@ public:
 
 int main()
 {
-	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
 
 
 	SUC suc = SUC::ReadFromFile("C:\\Users\\Rogier\\OneDrive - Universiteit Utrecht\\1UCTest\\GA10\\0.suc");
 	suc.PrintStats();
+	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
-	RRF rrf(suc, false);
-	cout <<"score: " << rrf.GetScore() << endl;
+
+	for (size_t i = 0; i < 1000; i++)
+	{
+		RRF rrf(suc, false);
+		double score = rrf.GetScore();
+		//cout << "score: " << score << endl;
+	}
+
+
 	//F f(suc, 0, 0);
 	//f.Print();
 	//f.NextPoints();s
@@ -628,8 +626,15 @@ int main()
 
 	//day01_part2();
 	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+
+	std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
 	std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
 	std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]" << std::endl;
 
 	return 0;
 }
+
+//    double minimum = Math.Min(to, Math.Max(from, MinimumAtInterval())); ;
+//    return (minimum, GetValueInt(minimum));
+//}
+
